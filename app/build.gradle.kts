@@ -34,6 +34,7 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
     implementation(libs.material)
     implementation("androidx.media:media:1.8.0")
 

@@ -10,7 +10,7 @@ import org.json.JSONObject
 class LyricsRepository {
     private val client = OkHttpClient()
 
-    suspend fun fetchLyrics(artist: String, track: String): List<LrcLine> = withContext(Dispatchers.IO) {
+    suspend fun fetchLyrics(artist: String, track: String): List<LyricsLine> = withContext(Dispatchers.IO) {
         val url = "https://lrclib.net/api/get".toHttpUrl().newBuilder()
             .addQueryParameter("artist_name", artist)
             .addQueryParameter("track_name", track)
@@ -37,7 +37,7 @@ class LyricsRepository {
                 val syncedLrc = json.optString("syncedLyrics", "")
 
                 if (syncedLrc.isNotBlank()) {
-                    return@withContext LrcParser.parse(syncedLrc)
+                    return@withContext LyricsParser.parse(syncedLrc)
                 }
             }
         } catch (_: Exception) { }

@@ -1,6 +1,7 @@
 package com.viksy.autolyrics.service
 
 import android.content.ComponentName
+import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager

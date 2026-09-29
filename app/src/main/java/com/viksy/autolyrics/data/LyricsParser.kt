@@ -1,15 +1,15 @@
 package com.viksy.autolyrics.data
 
-data class LrcLine(val timeMs: Long, val text: String)
+data class LyricsLine(val timeMs: Long, val text: String)
 
-object LrcParser {
-    private val regex = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)""")
+object LyricsParser {
+    private val lyricTextRegex = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})](.*)""")
 
-    fun parse(lrcContent: String): List<LrcLine> {
-        val lines = mutableListOf<LrcLine>()
+    fun parse(lrcContent: String): List<LyricsLine> {
+        val lines = mutableListOf<LyricsLine>()
 
         lrcContent.lineSequence().forEach { rawLine ->
-            val match = regex.find(rawLine.trim()) ?: return@forEach
+            val match = lyricTextRegex.find(rawLine.trim()) ?: return@forEach
 
             val (min, sec, sub, text) = match.destructured
             val totalMs = calculateMs(min, sec, sub)
@@ -18,7 +18,7 @@ object LrcParser {
                 return@forEach
             }
 
-            lines.add(LrcLine(totalMs, text.trim()))
+            lines.add(LyricsLine(totalMs, text.trim()))
         }
 
         return lines.sortedBy { it.timeMs }
