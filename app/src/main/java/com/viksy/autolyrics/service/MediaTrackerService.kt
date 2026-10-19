@@ -1,7 +1,6 @@
 package com.viksy.autolyrics.service
 
 import android.content.ComponentName
-import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -16,7 +15,8 @@ data class ActiveTrack(
     val artist: String,
     val isPlaying: Boolean,
     val positionMs: Long,
-    val lastUpdateTime: Long
+    val lastUpdateTime: Long,
+    val duration: Int
 ) {
     val currentEstimatedPositionMs: Long
         get() = if (isPlaying) {
@@ -44,22 +44,58 @@ class MediaTrackerService : NotificationListenerService() {
         }
     }
 
-    override fun onListenerConnected() {
-        super.onListenerConnected()
-        registerMediaSession()
+    private val sessionsChangedListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        updateActiveController(controllers)
     }
 
-    private fun registerMediaSession() {
+    override fun onListenerConnected() {
+        super.onListenerConnected()
         val sessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
         val component = ComponentName(this, MediaTrackerService::class.java)
-        val sessions = sessionManager.getActiveSessions(component)
+        sessionManager.addOnActiveSessionsChangedListener(sessionsChangedListener, component)
+        updateActiveController(sessionManager.getActiveSessions(component))
+    }
 
-        val ytMusicSession = sessions.firstOrNull {
-            it.packageName.contains("com.google.android.apps.youtube.music")
-        } ?: sessions.firstOrNull()
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        val sessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
+        sessionManager.removeOnActiveSessionsChangedListener(sessionsChangedListener)
+        activeController?.unregisterCallback(callback)
+    }
+
+    private fun updateActiveController(controllers: List<MediaController>?) {
+        if (controllers == null) return
+
+        val playingController = controllers.firstOrNull {
+            it.playbackState?.state == PlaybackState.STATE_PLAYING
+        }
+
+        val bestController = if (playingController != null) {
+            playingController
+        } else {
+            val currentStillExists = controllers.firstOrNull { it.sessionToken == activeController?.sessionToken }
+            currentStillExists
+                ?: (controllers.firstOrNull {
+                    it.packageName.contains("com.google.android.apps.youtube.music")
+                } ?: controllers.firstOrNull {
+                    it.packageName.contains("com.spotify.music")
+                } ?: controllers.firstOrNull())
+        }
+
+        if (bestController == null) {
+            activeController?.unregisterCallback(callback)
+            activeController = null
+            _currentTrack.value = _currentTrack.value?.copy(isPlaying = false)
+            return
+        }
+
+        if (activeController?.sessionToken == bestController.sessionToken) {
+            updateTrackInfo()
+            return
+        }
 
         activeController?.unregisterCallback(callback)
-        activeController = ytMusicSession?.apply {
+        activeController = bestController.apply {
             registerCallback(callback)
         }
 
@@ -75,16 +111,22 @@ class MediaTrackerService : NotificationListenerService() {
             return
         }
 
-        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown Artist"
-        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
+        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+            ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+            ?: "Unknown Artist"
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+            ?: metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
+            ?: "Unknown"
         val isPlaying = state.state == PlaybackState.STATE_PLAYING
+        val duration = (metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000).toInt()
 
         _currentTrack.value = ActiveTrack(
             title = title,
             artist = artist,
             isPlaying = isPlaying,
             positionMs = state.position,
-            lastUpdateTime = state.lastPositionUpdateTime
+            lastUpdateTime = state.lastPositionUpdateTime,
+            duration = duration
         )
     }
 }

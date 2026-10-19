@@ -4,23 +4,41 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+
+const val baseTextSize = 16f
+const val basePadding = 24
 
 class MainActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        enableEdgeToEdge()
+
         val layout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(64, 64, 64, 64)
+            gravity = Gravity.CENTER
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
 
         val statusText = TextView(this).apply {
-            text = "Grant notification access to allow this app to read active song titles from YouTube Music."
-            textSize = 16f
+            text = "Grant notification access to allow this app to read active song titles from your media player."
+            textSize = baseTextSize
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+
+            val marginDp = (basePadding * resources.displayMetrics.density).toInt()
+            setPadding(0, 0, 0, marginDp)
         }
 
         val button = Button(this).apply {
@@ -32,6 +50,22 @@ class MainActivity : AppCompatActivity() {
 
         layout.addView(statusText)
         layout.addView(button)
-        setContentView(layout)
+
+        val basePaddingPx = (basePadding * resources.displayMetrics.density).toInt()
+
+        ViewCompat.setOnApplyWindowInsetsListener(layout) { view, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            view.setPadding(
+                systemBars.left + basePaddingPx,
+                systemBars.top + basePaddingPx,
+                systemBars.right + basePaddingPx,
+                systemBars.bottom + basePaddingPx
+            )
+
+            windowInsets
+        }
+
+        setContentView((layout))
     }
 }

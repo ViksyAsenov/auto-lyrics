@@ -41,4 +41,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     implementation("org.json:json:20260814")
+    debugImplementation(libs.leakcanary)
 }
